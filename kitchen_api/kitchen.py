@@ -3,7 +3,12 @@ import config
 from cook import Cook
 from flask import Flask, request
 
+
 app = Flask(__name__)
+cooks = []
+cook_pipes = []
+orders = []
+aparatus = []
 
 @app.route('/order', methods=['POST'])
 def processor():
@@ -20,5 +25,15 @@ if __name__ == "__main__":
     processor_thread.start()
 
     # start cooks
+    for cook_identity in config.COOKS:
+        print(cook_identity)
+        pipe = queue.Queue()
+        cook = Cook(pipe, identity=cook_identity)
+        cooks.append(cook)
+        cook_pipes.append(pipe)
+        cook.start()
+
+    for c in cooks:
+        c.join()
 
     processor_thread.join()
