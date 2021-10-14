@@ -1,0 +1,5 @@
+TIME_UNIT = 1
+COOKS = 3
+COOKING_OVENS = 1
+COOKING_STOVES = 2
+DINING_HALL_URL = "http://dining-hall:5000"
