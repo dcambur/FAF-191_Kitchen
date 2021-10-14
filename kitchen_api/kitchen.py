@@ -6,7 +6,7 @@ from flask import Flask, request
 app = Flask(__name__)
 
 @app.route('/order', methods=['POST'])
-def distributor():
+def processor():
     if request:
         r = request.get_json(force=True)
         print(r)
@@ -20,5 +20,5 @@ if __name__ == "__main__":
     processor_thread.start()
 
     # start cooks
-    
+
     processor_thread.join()
