@@ -1,4 +1,4 @@
-import threading, queue
+import threading
 import config
 from cook import Cook
 from flask import Flask, request
@@ -6,7 +6,6 @@ from flask import Flask, request
 
 app = Flask(__name__)
 cooks = []
-cook_pipes = []
 orders = []
 aparatus = []
 
@@ -14,6 +13,8 @@ aparatus = []
 def processor():
     if request:
         r = request.get_json(force=True)
+        order_lock = threading.Lock()
+        orders.append({"order": r, "lock": order_lock})
         print(r)
         
     return "Ok"
@@ -26,11 +27,8 @@ if __name__ == "__main__":
 
     # start cooks
     for cook_identity in config.COOKS:
-        print(cook_identity)
-        pipe = queue.Queue()
-        cook = Cook(pipe, identity=cook_identity)
+        cook = Cook(orders, identity=cook_identity)
         cooks.append(cook)
-        cook_pipes.append(pipe)
         cook.start()
 
     for c in cooks:

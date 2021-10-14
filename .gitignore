@@ -96,7 +96,7 @@ __pypackages__/
 .pdm.toml
 pyproject.toml
 pdm.lock
-
+test.rest
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
