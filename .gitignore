@@ -93,6 +93,8 @@ ipython_config.py
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
+.pdm.toml
+pyproject.toml
 
 # Celery stuff
 celerybeat-schedule
@@ -129,3 +131,4 @@ dmypy.json
 .pyre/
 
 .idea
+.vscode
