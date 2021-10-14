@@ -1,6 +1,9 @@
 FROM python:3.8-slim-buster
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 ADD . /app
 RUN pip install -r requirements.txt
+WORKDIR /app/kitchen_api
+
 EXPOSE 5000
-CMD ["python", "app.py"]
+CMD ["python", "kitchen.py"]

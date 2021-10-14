@@ -1,5 +1,12 @@
 __pycache__
+__pypackages__
 *.pyc
 *.pyo
 *.pyd
 .Python
+.vscode
+.idea
+.git
+.gitignore
+pyproject.toml
+.pdm.toml
