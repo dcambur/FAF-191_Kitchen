@@ -11,3 +11,9 @@ docker image build -t kitchen .
 ```bash
 docker run -p 81:5000 --name kitchen -d kitchen
 ```
+
+## Logs
+
+```bash
+docker logs -f kitchen
+```

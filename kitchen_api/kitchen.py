@@ -13,7 +13,8 @@ aparatus = []
 @app.route('/order', methods=['POST'])
 def processor():
     if request:
-        r = request.get_json(force=True)
+        r = request.get_json()
+        print(f"New order received: {r}")
         for item in r["items"]:
             for menu_item in menu.menu:
                 if item == menu_item["id"]:
@@ -21,7 +22,6 @@ def processor():
                     food_list.append({"order_id": r["order_id"], "food": menu_item, "food_lock": food_lock, "prepared": False})
         order_lock = threading.Lock()
         orders.append({"order": r, "lock": order_lock})
-        print(f"New order received: {r}")
         print(f"Orders in list: {len(orders)}, foods in food_list: {len(food_list)}")
         
     return "Ok"
