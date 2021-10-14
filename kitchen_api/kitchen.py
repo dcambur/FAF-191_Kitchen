@@ -1,5 +1,5 @@
 import threading
-import config
+import config, menu
 from cook import Cook
 from flask import Flask, request
 
@@ -7,15 +7,22 @@ from flask import Flask, request
 app = Flask(__name__)
 cooks = []
 orders = []
+food_list = []
 aparatus = []
 
 @app.route('/order', methods=['POST'])
 def processor():
     if request:
         r = request.get_json(force=True)
+        for item in r["items"]:
+            for menu_item in menu.menu:
+                if item == menu_item["id"]:
+                    food_lock = threading.Lock()
+                    food_list.append({"order_id": r["order_id"], "food": menu_item, "food_lock": food_lock, "prepared": False})
         order_lock = threading.Lock()
         orders.append({"order": r, "lock": order_lock})
-        print(r)
+        print(f"New order received: {r}")
+        print(f"Orders in list: {len(orders)}, foods in food_list: {len(food_list)}")
         
     return "Ok"
 
@@ -27,7 +34,7 @@ if __name__ == "__main__":
 
     # start cooks
     for cook_identity in config.COOKS:
-        cook = Cook(orders, identity=cook_identity)
+        cook = Cook(food_list, identity=cook_identity)
         cooks.append(cook)
         cook.start()
 
