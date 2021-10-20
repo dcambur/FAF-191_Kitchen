@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     # start cooks
     for cook_identity in config.COOKS:
-        cook = Cook(food_list, identity=cook_identity)
+        cook = Cook(orders, food_list, identity=cook_identity)
         cooks.append(cook)
         cook.start()
 
