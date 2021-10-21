@@ -9,6 +9,7 @@ cooks = []
 orders = []
 food_list = []
 aparatus = []
+serve_lock = threading.RLock()
 
 @app.route('/order', methods=['POST'])
 def processor():
@@ -34,7 +35,7 @@ if __name__ == "__main__":
 
     # start cooks
     for cook_identity in config.COOKS:
-        cook = Cook(orders, food_list, identity=cook_identity)
+        cook = Cook(orders, food_list, serve_lock, identity=cook_identity)
         cooks.append(cook)
         cook.start()
 
