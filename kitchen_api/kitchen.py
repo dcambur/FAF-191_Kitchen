@@ -9,7 +9,7 @@ cooks = []
 orders = []
 food_list = []
 aparatus = []
-serve_lock = threading.RLock()
+serve_lock = threading.Lock()
 
 @app.route('/order', methods=['POST'])
 def processor():
