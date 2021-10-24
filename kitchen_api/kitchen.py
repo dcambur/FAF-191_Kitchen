@@ -32,7 +32,7 @@ def processor():
 if __name__ == "__main__":
     # start apparatuses
     for apparatus in config.APPARATUSES:
-        a = Apparatus(a_type=apparatus["type"], maxsize=apparatus["quantity"])
+        a = Apparatus(identity=apparatus)
         apparatuses.append(a)
 
     # start order processor

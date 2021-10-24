@@ -39,9 +39,9 @@ class Cook(threading.Thread):
                             # need a cooking apparatus
                             pass
             with self.serve_lock:
-                self._serve_order(item)
+                self.__serve_order(item)
         
-    def _serve_order(self, food):
+    def __serve_order(self, food):
         prepared_food = []
         cooking_details = []
         for food_item in self.food_list:
@@ -56,10 +56,10 @@ class Cook(threading.Thread):
                             order["order"]["cooking_details"] = prepared_food
                             requests.post(config.DINING_HALL_URL, data=json.dumps(order["order"]), headers={"Content-Type": "application/json"})
                             print(f"Cook {self.id}, {self.name}, sent order back to dining hall: {order['order']}")
-                            self._remove_foods(food["order_id"])
+                            self.__remove_foods(food["order_id"])
                             break
 
-    def _remove_foods(self, order_id):
+    def __remove_foods(self, order_id):
         # get position of foods with right order_id
         orders = []
         for idx, food in enumerate(self.food_list):
@@ -70,3 +70,6 @@ class Cook(threading.Thread):
             del(self.food_list[idx])
         
         print(f"Foods left in food list: {len(self.food_list)}")
+    
+    def __get_apparatus(self, apparatus):
+        pass
