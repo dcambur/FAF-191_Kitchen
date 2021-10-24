@@ -23,7 +23,6 @@ class Cook(threading.Thread):
 
     def cook_food(self): 
         for item in self.food_list:
-            time.sleep(random.randint(0, 3) * config.TIME_UNIT)
             with item["food_lock"]:
                 if not item["prepared"]:
                     if self.rank == item["food"]["complexity"] or (self.rank - item["food"]["complexity"] == 1):
