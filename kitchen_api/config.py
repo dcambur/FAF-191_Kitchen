@@ -14,6 +14,8 @@ COOKS = [{"name": "Bob Monkhouse",
           "rank": 3,
           "proficiency": 3, 
           "title": "Executive Chef"}]
-COOKING_OVENS = 1
-COOKING_STOVES = 2
+
+APPARATUSES = [{"type": "stove", "quantity": 2},
+              {"type": "oven", "quantity": 1}]
+
 DINING_HALL_URL = "http://dining-hall:5000/distribution"
