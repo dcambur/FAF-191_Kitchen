@@ -4,7 +4,7 @@ import config, menu
 
 class Cook(threading.Thread):
     cook_id = itertools.count()
-    def __init__(self, order_list, food_list, serve_lock, identity = {}, *args, **kwargs):
+    def __init__(self, order_list, food_list, serve_lock, identity = {}, apparatuses = [], *args, **kwargs):
         super(Cook, self).__init__(*args, **kwargs)
         self.food_list = food_list
         self.order_list = order_list
@@ -15,6 +15,7 @@ class Cook(threading.Thread):
         self.rank = identity["rank"]
         self.proficiency = identity["proficiency"]
         self.title = identity["title"]
+        self.apparatuses = apparatuses
 
     def run(self):
         while True:
@@ -26,13 +27,17 @@ class Cook(threading.Thread):
             with item["food_lock"]:
                 if not item["prepared"]:
                     if self.rank == item["food"]["complexity"] or (self.rank - item["food"]["complexity"] == 1):
-                        preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
-                        preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
-                        preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
-                        time.sleep(preparation_time)
-                        item["prepared"] = True
-                        item["cook_id"] = self.id
-                        print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}")
+                        if not item["food"]["cooking-apparatus"]:
+                            preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
+                            preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
+                            preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
+                            time.sleep(preparation_time)
+                            item["prepared"] = True
+                            item["cook_id"] = self.id
+                            print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}")
+                        else:
+                            # need a cooking apparatus
+                            pass
             with self.serve_lock:
                 self._serve_order(item)
         
