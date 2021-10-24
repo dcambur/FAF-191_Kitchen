@@ -18,20 +18,21 @@ class Cook(threading.Thread):
 
     def run(self):
         while True:
-            self.cook_order()
+            self.cook_food()
 
-    def cook_order(self): 
+    def cook_food(self): 
         for item in self.food_list:
             time.sleep(random.randint(0, 3) * config.TIME_UNIT)
             with item["food_lock"]:
                 if not item["prepared"]:
-                    preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
-                    preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
-                    preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
-                    time.sleep(preparation_time)
-                    item["prepared"] = True
-                    item["cook_id"] = self.id
-                    print(f"New food cooked - cook: {item['cook_id']}, order_id: {item['order_id']}, food_id: {item['food']['id']}, time to cook: {preparation_time} food: {item['food']['name']}")
+                    if self.rank == item["food"]["complexity"] or (self.rank - item["food"]["complexity"] == 1):
+                        preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
+                        preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
+                        preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
+                        time.sleep(preparation_time)
+                        item["prepared"] = True
+                        item["cook_id"] = self.id
+                        print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}")
             with self.serve_lock:
                 self._serve_order(item)
         
