@@ -1,4 +1,5 @@
 import threading, itertools, time, requests, json, random
+from datetime import datetime
 import config, menu
 
 
@@ -35,8 +36,35 @@ class Cook(threading.Thread):
                             item["cook_id"] = self.id
                             print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}")
                         else:
-                            # need a cooking apparatus
-                            pass
+                            # get apparatus
+                            if apparatus := self.__get_apparatus(item["food"]["cooking-apparatus"]):
+                                # check if the food is in apparatus being prepared
+                                if p_food := apparatus.get(item["food"]["id"], self.id):
+                                    # check food state/time
+                                    if (preparation_time := int(datetime.now().timestamp()) - p_food["preparation_time_start"]) >= (item['food']['preparation-time']*0.1):
+                                        # food is ready, need to remove it from apparatus and process
+                                        apparatus.remove(item['food']['id'], self.id)
+                                        item["prepared"] = True
+                                        item["cook_id"] = self.id
+                                        print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}, apparatus: {tem['food']['cooking-apparatus']}")
+                                    else:
+                                        # food should continue preparing, skip other tasks
+                                        print(f"Cannot cook {item['food']['id']}, is still being prepared in: {apparatus.type}")
+                                    break
+                                else:
+                                    # no such food in apparatus, we need to put it there for preparation
+                                    # FIXME: lock
+                                    if apparatus.put({"food": item["food"], "cook_id": self.id, "preparation_time_start": int(datetime.now().timestamp())}):
+                                        print(f"Food: {item['food']['id']} is in {apparatus.type}, preparation began.")
+                                    else:
+                                        # no free slots for apparatus, unlock this food so other cooks can try their chances if their rank is ok
+                                        print(f"Cannot cook {item['food']['id']}, {apparatus.type} is busy")
+                                    break
+
+                            else:
+                                # no such apparatus, should we skip and remove this food or halt our work?
+                                print(f"No such apparatus: {item["food"]["cooking-apparatus"]}")
+
             with self.serve_lock:
                 self.__serve_order(item)
         
@@ -70,5 +98,8 @@ class Cook(threading.Thread):
         
         print(f"Foods left in food list: {len(self.food_list)}")
     
-    def __get_apparatus(self, apparatus):
-        pass
+    def __get_apparatus(self, apparatus_type):
+        for apparatus in self.apparatuses:
+            if apparatus.type == apparatus_type:
+                return apparatus
+        return None
