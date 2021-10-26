@@ -40,7 +40,7 @@ class Cook(threading.Thread):
                             # return to beginnig to check if we have something in apparatuses
                         else:
                             # get apparatus
-                            if apparatus := self.__get_apparatus(item["food"]["cooking-apparatus"]):
+                            if (apparatus := self.__get_apparatus(item["food"]["cooking-apparatus"])) != None:
                                 # check if the food is in apparatus being prepared
                                 if p_food := apparatus.get(item["food"]["id"], self.id):
                                     # check food state/time
