@@ -18,13 +18,13 @@ class Apparatus():
 
     def get(self, food_id, cook_id):
         for food in self.foods:
-            if food["food_id"] == food_id and food["cook_id"] == cook_id:
+            if food["food"]["id"] == food_id and food["cook_id"] == cook_id:
                 return food
         return None
 
     def remove(self, food_id, cook_id):
         idx_to_remove = None
-        for idx, food in self.foods:
+        for idx, food in enumerate(self.foods):
             if food["food"]["id"] == food_id and food["cook_id"] == cook_id:
                 idx_to_remove = idx
                 break

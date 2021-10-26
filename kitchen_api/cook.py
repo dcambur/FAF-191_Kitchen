@@ -5,18 +5,20 @@ import config, menu
 
 class Cook(threading.Thread):
     cook_id = itertools.count()
-    def __init__(self, order_list, food_list, serve_lock, identity = {}, apparatuses = [], *args, **kwargs):
+    def __init__(self, order_list, food_list, serve_lock, apparatus_lock, identity = {}, apparatuses = [], *args, **kwargs):
         super(Cook, self).__init__(*args, **kwargs)
         self.food_list = food_list
         self.order_list = order_list
         self.id = next(self.cook_id)
         self.serve_lock = serve_lock
+        self.apparatus_lock = apparatus_lock
         self.name = identity["name"]
         self.catchphrase = identity["catchphrase"]
         self.rank = identity["rank"]
         self.proficiency = identity["proficiency"]
         self.title = identity["title"]
         self.apparatuses = apparatuses
+        self.i_use_apparatus = False
 
     def run(self):
         while True:
@@ -27,7 +29,7 @@ class Cook(threading.Thread):
             with item["food_lock"]:
                 if not item["prepared"]:
                     if self.rank == item["food"]["complexity"] or (self.rank - item["food"]["complexity"] == 1):
-                        if not item["food"]["cooking-apparatus"]:
+                        if not item["food"]["cooking-apparatus"] and not self.i_use_apparatus:
                             preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
                             preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
                             preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
@@ -35,36 +37,32 @@ class Cook(threading.Thread):
                             item["prepared"] = True
                             item["cook_id"] = self.id
                             print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}")
+                            # return to beginnig to check if we have something in apparatuses
                         else:
                             # get apparatus
                             if apparatus := self.__get_apparatus(item["food"]["cooking-apparatus"]):
                                 # check if the food is in apparatus being prepared
                                 if p_food := apparatus.get(item["food"]["id"], self.id):
                                     # check food state/time
-                                    if (preparation_time := int(datetime.now().timestamp()) - p_food["preparation_time_start"]) >= (item['food']['preparation-time']*0.1):
+                                    if (preparation_time := (int(datetime.now().timestamp()) - p_food["preparation_time_start"])*config.TIME_UNIT) >= (item['food']['preparation-time']*config.TIME_UNIT):
                                         # food is ready, need to remove it from apparatus and process
                                         apparatus.remove(item['food']['id'], self.id)
+                                        self.i_use_apparatus = False
                                         item["prepared"] = True
                                         item["cook_id"] = self.id
-                                        print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}, apparatus: {tem['food']['cooking-apparatus']}")
-                                    else:
-                                        # food should continue preparing, skip other tasks
-                                        print(f"Cannot cook {item['food']['id']}, is still being prepared in: {apparatus.type}")
-                                    break
+                                        print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}, apparatus: {item['food']['cooking-apparatus']}")
                                 else:
                                     # no such food in apparatus, we need to put it there for preparation
-                                    # FIXME: lock
-                                    if apparatus.put({"food": item["food"], "cook_id": self.id, "preparation_time_start": int(datetime.now().timestamp())}):
-                                        print(f"Food: {item['food']['id']} is in {apparatus.type}, preparation began.")
-                                    else:
-                                        # no free slots for apparatus, unlock this food so other cooks can try their chances if their rank is ok
-                                        print(f"Cannot cook {item['food']['id']}, {apparatus.type} is busy")
-                                    break
-
+                                    # lock apparatus before putting something
+                                    if self.apparatus_lock.acquire(blocking=False):
+                                        if apparatus.put({"food": item["food"], "cook_id": self.id, "preparation_time_start": int(datetime.now().timestamp())}):
+                                            print(f"Food: {item['food']['id']} is in {apparatus.type}, preparation began.")
+                                            self.i_use_apparatus = True
+                                            self.apparatus_lock.release()
                             else:
                                 # no such apparatus, should we skip and remove this food or halt our work?
-                                print(f"No such apparatus: {item["food"]["cooking-apparatus"]}")
-
+                                print(f"No such apparatus: {item['food']['cooking-apparatus']}")
+                        break
             with self.serve_lock:
                 self.__serve_order(item)
         
