@@ -30,9 +30,7 @@ class Cook(threading.Thread):
                 if not item["prepared"]:
                     if self.rank == item["food"]["complexity"] or (self.rank - item["food"]["complexity"] == 1):
                         if not item["food"]["cooking-apparatus"] and not self.i_use_apparatus:
-                            preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
-                            preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
-                            preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
+                            preparation_time = item['food']['preparation-time'] * config.TIME_UNIT
                             time.sleep(preparation_time)
                             item["prepared"] = True
                             item["cook_id"] = self.id
