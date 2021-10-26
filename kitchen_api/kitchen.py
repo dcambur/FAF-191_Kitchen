@@ -1,6 +1,7 @@
 import threading
 import config, menu
 from cook import Cook
+from apparatus import Apparatus
 from flask import Flask, request
 
 
@@ -8,8 +9,10 @@ app = Flask(__name__)
 cooks = []
 orders = []
 food_list = []
-aparatus = []
-serve_lock = threading.RLock()
+apparatuses = []
+serve_lock = threading.Lock()
+apparatus_lock = threading.Lock()
+
 
 @app.route('/order', methods=['POST'])
 def processor():
@@ -29,13 +32,18 @@ def processor():
 
 
 if __name__ == "__main__":
+    # start apparatuses
+    for apparatus in config.APPARATUSES:
+        a = Apparatus(identity=apparatus)
+        apparatuses.append(a)
+
     # start order processor
     processor_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port='5000', debug=True, use_reloader=False))
     processor_thread.start()
 
     # start cooks
     for cook_identity in config.COOKS:
-        cook = Cook(orders, food_list, serve_lock, identity=cook_identity)
+        cook = Cook(orders, food_list, serve_lock, apparatus_lock, identity=cook_identity, apparatuses=apparatuses)
         cooks.append(cook)
         cook.start()
 
