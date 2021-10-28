@@ -25,7 +25,8 @@ def processor():
                     food_lock = threading.Lock()
                     food_list.append({"order_id": r["order_id"], "food": menu_item, "food_lock": food_lock, "prepared": False})
         order_lock = threading.Lock()
-        orders.append({"order": r, "lock": order_lock})
+        with serve_lock:
+            orders.append({"order": r, "lock": order_lock})
         print(f"Orders in list: {len(orders)}, foods in food_list: {len(food_list)}")
         
     return "Ok"

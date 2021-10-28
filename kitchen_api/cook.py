@@ -26,10 +26,11 @@ class Cook(threading.Thread):
 
     def cook_food(self): 
         for item in self.food_list:
-            with item["food_lock"]:
+            if item["food_lock"].acquire(blocking=False):
+            #with item["food_lock"]:
                 if not item["prepared"]:
-                    if self.rank == item["food"]["complexity"] or (self.rank - item["food"]["complexity"] == 1):
-                        if not item["food"]["cooking-apparatus"] and not self.i_use_apparatus:
+                    if self.rank - item["food"]["complexity"] in range(0, 2):
+                        if item["food"]["cooking-apparatus"] == None and not self.i_use_apparatus:
                             preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
                             preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
                             preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
@@ -40,7 +41,7 @@ class Cook(threading.Thread):
                             # return to beginnig to check if we have something in apparatuses
                         else:
                             # get apparatus
-                            if apparatus := self.__get_apparatus(item["food"]["cooking-apparatus"]):
+                            if (apparatus := self.__get_apparatus(item["food"]["cooking-apparatus"])) != None:
                                 # check if the food is in apparatus being prepared
                                 if p_food := apparatus.get(item["food"]["id"], self.id):
                                     # check food state/time
@@ -58,23 +59,22 @@ class Cook(threading.Thread):
                                         if apparatus.put({"food": item["food"], "cook_id": self.id, "preparation_time_start": int(datetime.now().timestamp())}):
                                             print(f"Food: {item['food']['id']} is in {apparatus.type}, preparation began.")
                                             self.i_use_apparatus = True
-                                            self.apparatus_lock.release()
-                            else:
-                                # no such apparatus, should we skip and remove this food or halt our work?
-                                print(f"No such apparatus: {item['food']['cooking-apparatus']}")
+                                        self.apparatus_lock.release()
+                        if item["food_lock"].locked():
+                            item["food_lock"].release()
                         break
-            with self.serve_lock:
-                self.__serve_order(item)
+                item["food_lock"].release()
+            self.__serve_order(item)
         
     def __serve_order(self, food):
         prepared_food = []
-        cooking_details = []
         for food_item in self.food_list:
             if food_item["order_id"] == food["order_id"] and food_item["prepared"]:
                 prepared_food.append({"food_id": food_item["food"]["id"], "cook_id": food_item["cook_id"]})
         
         if len(prepared_food) > 0:
-            for order in self.order_list:
+            o_remove = None
+            for order_idx, order in enumerate(self.order_list):
                 with order["lock"]:
                     if order["order"]["order_id"] == food["order_id"]:
                         if len(order["order"]["items"]) == len(prepared_food):
@@ -82,18 +82,23 @@ class Cook(threading.Thread):
                             requests.post(config.DINING_HALL_URL, data=json.dumps(order["order"]), headers={"Content-Type": "application/json"})
                             print(f"Cook {self.id}, {self.name}, sent order back to dining hall: {order['order']}")
                             self.__remove_foods(food["order_id"])
+                            o_remove = order_idx
                             break
+            with self.serve_lock:
+                if o_remove != None:
+                    del(self.order_list[o_remove])
 
     def __remove_foods(self, order_id):
         # get position of foods with right order_id
-        orders = []
+        foods = []
         for idx, food in enumerate(self.food_list):
             if food["order_id"] == order_id:
-                orders.append(idx)
+                foods.append(idx)
         
-        for idx in orders:
+        for idx in foods:
             del(self.food_list[idx])
         
+
         print(f"Foods left in food list: {len(self.food_list)}")
     
     def __get_apparatus(self, apparatus_type):
