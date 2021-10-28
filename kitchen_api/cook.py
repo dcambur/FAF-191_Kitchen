@@ -28,8 +28,8 @@ class Cook(threading.Thread):
         for item in self.food_list:
             with item["food_lock"]:
                 if not item["prepared"]:
-                    if self.rank == item["food"]["complexity"] or (self.rank - item["food"]["complexity"] == 1):
-                        if not item["food"]["cooking-apparatus"] and not self.i_use_apparatus:
+                    if self.rank - item["food"]["complexity"] <= 1:
+                        if item["food"]["cooking-apparatus"] == None and not self.i_use_apparatus:
                             preparation_time_start = item['food']['preparation-time'] - item['food']['preparation-time']*0.1
                             preparation_time_end = item['food']['preparation-time'] + item['food']['preparation-time']*0.1
                             preparation_time = round(random.uniform(preparation_time_start, preparation_time_end)*config.TIME_UNIT, 2)
@@ -62,6 +62,7 @@ class Cook(threading.Thread):
                             else:
                                 # no such apparatus, should we skip and remove this food or halt our work?
                                 print(f"No such apparatus: {item['food']['cooking-apparatus']}")
+
                         break
             with self.serve_lock:
                 self.__serve_order(item)
