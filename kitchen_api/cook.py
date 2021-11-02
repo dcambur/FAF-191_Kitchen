@@ -5,9 +5,10 @@ import config, menu
 
 class Cook(threading.Thread):
     cook_id = itertools.count()
-    def __init__(self, order_list, food_list, serve_lock, apparatus_lock, identity = {}, apparatuses = [], *args, **kwargs):
+    def __init__(self, order_list, food_list, food_list_lock, serve_lock, apparatus_lock, identity = {}, apparatuses = [], *args, **kwargs):
         super(Cook, self).__init__(*args, **kwargs)
         self.food_list = food_list
+        self.food_list_lock = food_list_lock
         self.order_list = order_list
         self.id = next(self.cook_id)
         self.serve_lock = serve_lock
@@ -27,7 +28,6 @@ class Cook(threading.Thread):
     def cook_food(self): 
         for item in self.food_list:
             if item["food_lock"].acquire(blocking=False):
-            #with item["food_lock"]:
                 if not item["prepared"]:
                     if self.rank - item["food"]["complexity"] in range(0, 2):
                         if item["food"]["cooking-apparatus"] == None and not self.i_use_apparatus:
@@ -38,7 +38,6 @@ class Cook(threading.Thread):
                             item["prepared"] = True
                             item["cook_id"] = self.id
                             print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}")
-                            # return to beginnig to check if we have something in apparatuses
                         else:
                             # get apparatus
                             if (apparatus := self.__get_apparatus(item["food"]["cooking-apparatus"])) != None:
@@ -48,7 +47,8 @@ class Cook(threading.Thread):
                                     if (preparation_time := (int(datetime.now().timestamp()) - p_food["preparation_time_start"])*config.TIME_UNIT) >= (item['food']['preparation-time']*config.TIME_UNIT):
                                         # food is ready, need to remove it from apparatus and process
                                         apparatus.remove(item['food']['id'], self.id)
-                                        self.i_use_apparatus = False
+                                        if apparatus.count(self.id) == 0:
+                                            self.i_use_apparatus = False
                                         item["prepared"] = True
                                         item["cook_id"] = self.id
                                         print(f"New food cooked - cook: {item['cook_id']}, cook's rank {self.rank}, order_id: {item['order_id']}, food_id: {item['food']['id']}, food_complexity: {item['food']['complexity']}, time to cook: {preparation_time} food: {item['food']['name']}, apparatus: {item['food']['cooking-apparatus']}")
@@ -57,12 +57,11 @@ class Cook(threading.Thread):
                                     # lock apparatus before putting something
                                     if self.apparatus_lock.acquire(blocking=False):
                                         if apparatus.put({"food": item["food"], "cook_id": self.id, "preparation_time_start": int(datetime.now().timestamp())}):
-                                            print(f"Food: {item['food']['id']} is in {apparatus.type}, preparation began.")
                                             self.i_use_apparatus = True
                                         self.apparatus_lock.release()
-                        if item["food_lock"].locked():
-                            item["food_lock"].release()
-                        break
+                        #if item["food_lock"].locked():
+                        #    item["food_lock"].release()
+                        #break
                 item["food_lock"].release()
             self.__serve_order(item)
         
@@ -73,34 +72,16 @@ class Cook(threading.Thread):
                 prepared_food.append({"food_id": food_item["food"]["id"], "cook_id": food_item["cook_id"]})
         
         if len(prepared_food) > 0:
-            o_remove = None
-            for order_idx, order in enumerate(self.order_list):
-                with order["lock"]:
-                    if order["order"]["order_id"] == food["order_id"]:
+            with self.serve_lock:
+                for order in self.order_list:
+                    if order["order"]["order_id"] == food["order_id"] and order["order"]["state"] == 1:
                         if len(order["order"]["items"]) == len(prepared_food):
                             order["order"]["cooking_details"] = prepared_food
+                            order["order"]["state"] = 2
                             requests.post(config.DINING_HALL_URL, data=json.dumps(order["order"]), headers={"Content-Type": "application/json"})
                             print(f"Cook {self.id}, {self.name}, sent order back to dining hall: {order['order']}")
-                            self.__remove_foods(food["order_id"])
-                            o_remove = order_idx
                             break
-            with self.serve_lock:
-                if o_remove != None:
-                    del(self.order_list[o_remove])
 
-    def __remove_foods(self, order_id):
-        # get position of foods with right order_id
-        foods = []
-        for idx, food in enumerate(self.food_list):
-            if food["order_id"] == order_id:
-                foods.append(idx)
-        
-        for idx in foods:
-            del(self.food_list[idx])
-        
-
-        print(f"Foods left in food list: {len(self.food_list)}")
-    
     def __get_apparatus(self, apparatus_type):
         for apparatus in self.apparatuses:
             if apparatus.type == apparatus_type:

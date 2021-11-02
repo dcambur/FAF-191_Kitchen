@@ -22,6 +22,13 @@ class Apparatus():
                 return food
         return None
 
+    def count(self, cook_id):
+        counter = 0
+        for food in self.foods:
+            if food["cook_id"] == cook_id:
+                counter =+ 1
+        return counter
+
     def remove(self, food_id, cook_id):
         idx_to_remove = None
         for idx, food in enumerate(self.foods):
