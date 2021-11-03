@@ -20,10 +20,23 @@ class Cook(threading.Thread):
         self.title = identity["title"]
         self.apparatuses = apparatuses
         self.i_use_apparatus = False
+        self.stop_requested = threading.Event()
+        self.exception = None
 
     def run(self):
-        while True:
-            self.cook_food()
+        try:
+            # stop if stop is requested
+            while not self.stop_requested.wait(1):
+                self.cook_food()
+        except Exception as e:
+            self.exception = e
+
+        # clean up 
+        print(f"Exiting thread {self.name}")
+
+    def stop(self):
+        # send stop event
+        self.stop_requested.set()
 
     def cook_food(self): 
         for item in self.food_list:
