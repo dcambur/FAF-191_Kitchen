@@ -1,4 +1,4 @@
-import threading
+import threading, time
 import config, menu
 from cook import Cook
 from apparatus import Apparatus
@@ -6,7 +6,7 @@ from flask import Flask, request
 
 
 app = Flask(__name__)
-cooks = []
+threads = []
 orders = []
 food_list = []
 apparatuses = []
@@ -40,15 +40,28 @@ if __name__ == "__main__":
 
     # start order processor
     processor_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port='5000', debug=True, use_reloader=False))
+    processor_thread.daemon = True
     processor_thread.start()
 
     # start cooks
     for cook_identity in config.COOKS:
         cook = Cook(orders, food_list, food_list_lock, serve_lock, apparatus_lock, identity=cook_identity, apparatuses=apparatuses)
-        cooks.append(cook)
+        cook.daemon = True
+        threads.append(cook)
         cook.start()
 
-    for c in cooks:
-        c.join()
+    try:
+        while True:
+            for t in threads:
+                if t.exception:
+                    # thread raised an exception
+                    raise t.exception
+            time.sleep(0.2)
 
-    processor_thread.join()
+    except Exception as e:
+        print("Exiting in main thread")
+
+    finally:
+        for t in threads:
+            # stop the threads
+            t.stop()
